@@ -33,5 +33,4 @@ public class SingleMediaScanner implements MediaScannerConnection.MediaScannerCo
         context.startActivity(intent);
         mMs.disconnect();
     }
-
 }

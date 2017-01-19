@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">CameraTask</string>
+    <string name="drawer_open">open drawer</string>
+    <string name="drawer_close">close drawer</string>
+
+    <string name="png_type">.PNG</string>
+    <string name="jpeg_type">.JPEG</string>
+
 </resources>
