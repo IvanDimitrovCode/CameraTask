@@ -25,25 +25,27 @@ public class CustomAdapter extends ArrayAdapter<DrawerOption> {
     private PictureTypeListener    mPictureTypeListener;
     private FlashListener          mFlashListener;
     private ZoomPercentageListener mZoomListener;
+    private ExposureListener       mExposureListener;
+    private int                    mItemType;
 
 
     public CustomAdapter(Activity context, ArrayList<DrawerOption> drawerOptionList,
                          PictureTypeListener pictureTypeListener, FlashListener flashListener,
-                         ZoomPercentageListener zoomListener) {
+                         ZoomPercentageListener zoomListener, ExposureListener exposureListener) {
         super(context, 0, drawerOptionList);
         this.mContext = context;
         this.mDrawerOptionList = drawerOptionList;
         this.mPictureTypeListener = pictureTypeListener;
         this.mFlashListener = flashListener;
         this.mZoomListener = zoomListener;
+        this.mExposureListener = exposureListener;
     }
 
     @Override
     public View getView(int position, View view, ViewGroup parent) {
-        int itemType;
-        itemType = mDrawerOptionList.get(position).getType();
+        mItemType = mDrawerOptionList.get(position).getType();
 
-        switch (itemType) {
+        switch (mItemType) {
             case DrawerOption.DRAWER_WITH_CHECKBOX:
                 view = checkBoxSetup(view);
                 break;
@@ -51,6 +53,9 @@ public class CustomAdapter extends ArrayAdapter<DrawerOption> {
                 view = radioButtonSetup(view);
                 break;
             case DrawerOption.DRAWER_WITH_SEEKBAR:
+                view = seekBarSetup(view);
+                break;
+            case DrawerOption.DRAWER_WITH_SEEKBAR_EX:
                 view = seekBarSetup(view);
                 break;
             default:
@@ -70,7 +75,11 @@ public class CustomAdapter extends ArrayAdapter<DrawerOption> {
             viewHolder.seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                 @Override
                 public void onProgressChanged(SeekBar seekBar, int progress, boolean b) {
-                    mZoomListener.onZoomPercentageChange(progress);
+                    if (mItemType == DrawerOption.DRAWER_WITH_SEEKBAR) {
+                        mZoomListener.onZoomPercentageChange(progress);
+                    } else if (mItemType == DrawerOption.DRAWER_WITH_SEEKBAR_EX) {
+                        mExposureListener.onExposurePercentageChange(progress);
+                    }
                 }
 
                 @Override
@@ -87,7 +96,11 @@ public class CustomAdapter extends ArrayAdapter<DrawerOption> {
         } else {
             viewHolder = (ViewHolderSeekbar) view.getTag();
         }
-        viewHolder.txtTitle.setText(R.string.zoom);
+        if (mItemType == DrawerOption.DRAWER_WITH_SEEKBAR) {
+            viewHolder.txtTitle.setText(R.string.zoom);
+        } else if (mItemType == DrawerOption.DRAWER_WITH_SEEKBAR_EX) {
+            viewHolder.txtTitle.setText(R.string.exposure);
+        }
         return view;
     }
 
@@ -158,6 +171,11 @@ public class CustomAdapter extends ArrayAdapter<DrawerOption> {
     static class ViewHolderCheckbox {
         TextView txtTitle;
         CheckBox button;
+    }
+
+    interface ExposureListener {
+        public void onExposurePercentageChange(int percentage);
+
     }
 
     interface ZoomPercentageListener {

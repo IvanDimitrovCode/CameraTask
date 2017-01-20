@@ -33,13 +33,13 @@ import java.util.ArrayList;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity implements CustomAdapter.PictureTypeListener,
-        CustomAdapter.FlashListener, CustomAdapter.ZoomPercentageListener {
+        CustomAdapter.FlashListener, CustomAdapter.ZoomPercentageListener, CustomAdapter.ExposureListener {
 
     public static final  int MEDIA_TYPE_IMAGE       = 1;
     public static final  int MEDIA_TYPE_VIDEO       = 2;
     private static final int MY_PERMISSIONS_REQUEST = 1;
 
-    private String   mChosenType   = CustomAdapter.PICTURE_TYPE_JPG;
+    private String mChosenType = CustomAdapter.PICTURE_TYPE_JPG;
     private Context               mContext;
     private Button                mCameraButton;
     private Button                mDisplayButton;
@@ -47,9 +47,9 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
     private ListView              mDrawerList;
     private ActionBarDrawerToggle mDrawerToggle;
 
-    private Camera            mCamera;
-    private CameraPreview     mPreview;
-    private Camera.Parameters mParams;
+    private static Camera            mCamera;
+    private        CameraPreview     mPreview;
+    private        Camera.Parameters mParams;
     private Camera.PictureCallback mPicture = new Camera.PictureCallback() {
 
         @Override
@@ -85,17 +85,26 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
         }
     }
 
+    @Override
+    protected void onDestroy() {
+        if (mCamera != null) {
+            mCamera.release();
+        }
+        super.onDestroy();
+    }
+
     //===============================================
     private void initDrawerMenu() {
         ArrayList<DrawerOption> list = new ArrayList<>();
         list.add(new DrawerOption(DrawerOption.DRAWER_WITH_CHECKBOX));
         list.add(new DrawerOption(DrawerOption.DRAWER_WITH_RADIO));
         list.add(new DrawerOption(DrawerOption.DRAWER_WITH_SEEKBAR));
+        list.add(new DrawerOption(DrawerOption.DRAWER_WITH_SEEKBAR_EX));
 
         mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         mDrawerList = (ListView) findViewById(R.id.left_drawer);
 
-        mDrawerList.setAdapter(new CustomAdapter(this, list, this, this, this));
+        mDrawerList.setAdapter(new CustomAdapter(this, list, this, this, this, this));
 
         mDrawerToggle = new ActionBarDrawerToggle(
                 this,                  /* host Activity */
@@ -307,5 +316,20 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
     public void onZoomPercentageChange(int percentage) {
         mParams.setZoom(percentage);
         mCamera.setParameters(mParams);
+    }
+
+    @Override
+    public void onExposurePercentageChange(int percentage) {
+        int maxExposure = mParams.getMaxExposureCompensation();
+        int minExposure = mParams.getMinExposureCompensation();
+        int exposureRange;
+
+        if (minExposure == 0) {
+            exposureRange = minExposure + maxExposure;
+        } else {
+            exposureRange = (minExposure * (-1)) + maxExposure;
+        }
+        double valuePlus = exposureRange * ((double) percentage / 100);
+        mParams.setExposureCompensation((int) (minExposure + valuePlus));
     }
 }

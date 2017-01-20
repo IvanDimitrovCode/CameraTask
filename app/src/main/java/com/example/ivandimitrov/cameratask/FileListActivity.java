@@ -97,6 +97,9 @@ public class FileListActivity extends AppCompatActivity {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     String newName = input.getText().toString();
+                    if (newName.matches("^.*[^a-zA-Z0-9 ].*$")) {
+                        return;
+                    }
                     for (File file : mFileList) {
                         if (file.getName().equals(newName)) {
                             return;

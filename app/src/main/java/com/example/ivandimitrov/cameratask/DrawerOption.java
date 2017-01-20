@@ -7,9 +7,10 @@ import android.widget.TextView;
  */
 
 public class DrawerOption {
-    public static final int DRAWER_WITH_RADIO    = 100;
-    public static final int DRAWER_WITH_CHECKBOX = 101;
-    public static final int DRAWER_WITH_SEEKBAR  = 102;
+    public static final int DRAWER_WITH_RADIO      = 100;
+    public static final int DRAWER_WITH_CHECKBOX   = 101;
+    public static final int DRAWER_WITH_SEEKBAR    = 102;
+    public static final int DRAWER_WITH_SEEKBAR_EX = 103; // just for exposure percentage
 
     private int type;
 

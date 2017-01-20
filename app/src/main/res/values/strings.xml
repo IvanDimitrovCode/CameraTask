@@ -17,5 +17,6 @@
     <string name="flash">Flash</string>
     <string name="image_type">Image type</string>
     <string name="zoom">Zoom</string>
+    <string name="exposure">Exposure %</string>
 
 </resources>
