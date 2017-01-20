@@ -9,6 +9,8 @@ import android.widget.TextView;
 public class DrawerOption {
     public static final int DRAWER_WITH_RADIO    = 100;
     public static final int DRAWER_WITH_CHECKBOX = 101;
+    public static final int DRAWER_WITH_SEEKBAR  = 102;
+
     private int type;
 
     public DrawerOption(int type) {

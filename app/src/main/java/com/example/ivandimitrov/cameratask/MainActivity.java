@@ -1,11 +1,16 @@
 package com.example.ivandimitrov.cameratask;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.hardware.Camera;
 import android.os.Environment;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
@@ -27,13 +32,15 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 
-public class MainActivity extends AppCompatActivity implements CustomAdapter.PictureTypeListener, CustomAdapter.FlashListener {
-    public static final int MEDIA_TYPE_IMAGE = 1;
-    public static final int MEDIA_TYPE_VIDEO = 2;
+public class MainActivity extends AppCompatActivity implements CustomAdapter.PictureTypeListener,
+        CustomAdapter.FlashListener, CustomAdapter.ZoomPercentageListener {
 
-    private String   chosenType    = CustomAdapter.PICTURE_TYPE_JPG;
-    private String[] mPlanetTitles = {"Settings", "Other"};
-    private Context               context;
+    public static final  int MEDIA_TYPE_IMAGE       = 1;
+    public static final  int MEDIA_TYPE_VIDEO       = 2;
+    private static final int MY_PERMISSIONS_REQUEST = 1;
+
+    private String   mChosenType   = CustomAdapter.PICTURE_TYPE_JPG;
+    private Context               mContext;
     private Button                mCameraButton;
     private Button                mDisplayButton;
     private DrawerLayout          mDrawerLayout;
@@ -43,23 +50,39 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
     private Camera            mCamera;
     private CameraPreview     mPreview;
     private Camera.Parameters mParams;
+    private Camera.PictureCallback mPicture = new Camera.PictureCallback() {
+
+        @Override
+        public void onPictureTaken(byte[] data, Camera camera) {
+            File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
+            camera.startPreview();
+
+            if (pictureFile == null) {
+                Log.d("ERROR", "Error creating media file, check storage permissions: ");
+                return;
+            }
+            try {
+                FileOutputStream fos = new FileOutputStream(pictureFile);
+                Log.d("CAMERA", pictureFile.getAbsolutePath());
+                fos.write(data);
+                fos.close();
+            } catch (FileNotFoundException e) {
+                Log.d("ERROR", "File not found: " + e.getMessage());
+            } catch (IOException e) {
+                Log.d("ERROR", "Error accessing file: " + e.getMessage());
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        context = this;
-        initButtons();
-        initDrawerMenu();
-        mCamera = getCameraInstance();
-
-        mParams = mCamera.getParameters();
-        mParams.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
-        mCamera.setParameters(mParams);
-
-        mPreview = new CameraPreview(this, mCamera);
-        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
-        preview.addView(mPreview);
+        if (checkForPermission()) {
+            runActivity();
+        } else {
+            askPermission();
+        }
     }
 
     //===============================================
@@ -67,9 +90,12 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
         ArrayList<DrawerOption> list = new ArrayList<>();
         list.add(new DrawerOption(DrawerOption.DRAWER_WITH_CHECKBOX));
         list.add(new DrawerOption(DrawerOption.DRAWER_WITH_RADIO));
+        list.add(new DrawerOption(DrawerOption.DRAWER_WITH_SEEKBAR));
+
         mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         mDrawerList = (ListView) findViewById(R.id.left_drawer);
-        mDrawerList.setAdapter(new CustomAdapter(this, list, this, this));
+
+        mDrawerList.setAdapter(new CustomAdapter(this, list, this, this, this));
 
         mDrawerToggle = new ActionBarDrawerToggle(
                 this,                  /* host Activity */
@@ -103,13 +129,17 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
         // Sync the toggle state after onRestoreInstanceState has occurred.
-        mDrawerToggle.syncState();
+        if (mDrawerToggle != null) {
+            mDrawerToggle.syncState();
+        }
     }
 
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        mDrawerToggle.onConfigurationChanged(newConfig);
+        if (mDrawerToggle != null) {
+            mDrawerToggle.onConfigurationChanged(newConfig);
+        }
     }
 
     @Override
@@ -120,11 +150,62 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
             return true;
         }
         // Handle your other action bar items...
-
         return super.onOptionsItemSelected(item);
     }
 
     //=======================================================
+
+    private void runActivity() {
+        mContext = this;
+        initButtons();
+        initDrawerMenu();
+        mCamera = getCameraInstance();
+
+        mParams = mCamera.getParameters();
+        mParams.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+        mCamera.setParameters(mParams);
+
+        mPreview = new CameraPreview(this, mCamera);
+        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
+        preview.addView(mPreview);
+    }
+
+    private void askPermission() {
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                MY_PERMISSIONS_REQUEST);
+    }
+
+    private boolean checkForPermission() {
+        int permissionCamera = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.CAMERA);
+        int permissionWriteExternal = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        if (permissionCamera == PackageManager.PERMISSION_GRANTED &&
+                permissionWriteExternal == PackageManager.PERMISSION_GRANTED) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        boolean permissionGranted = false;
+        switch (requestCode) {
+            case MY_PERMISSIONS_REQUEST: {
+                if (grantResults.length > 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED &&
+                        grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+                    permissionGranted = true;
+                }
+                break;
+            }
+        }
+        if (permissionGranted) {
+            runActivity();
+        }
+    }
+
+
     public static Camera getCameraInstance() {
         Camera c = null;
         try {
@@ -136,14 +217,15 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
     }
 
     void showSavePictureConfirmation() {
-        new AlertDialog.Builder(context).setTitle("Picture taken")
+        new AlertDialog.Builder(mContext).setTitle("Picture taken")
                 .setMessage("Do you want to save the picture")
                 .setPositiveButton("yes", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
+                        mCamera.stopPreview();
+                        mCamera.startPreview();
                         mCamera.takePicture(null, null, mPicture);
                         Log.d("CAMERA", "START PREVIEW");
-                        mCamera.startPreview();
                     }
                 })
                 .setNegativeButton("no", new DialogInterface.OnClickListener() {
@@ -154,27 +236,6 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
                 }).show();
     }
 
-    private Camera.PictureCallback mPicture = new Camera.PictureCallback() {
-
-        @Override
-        public void onPictureTaken(byte[] data, Camera camera) {
-            File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
-            if (pictureFile == null) {
-                Log.d("ERROR", "Error creating media file, check storage permissions: ");
-                return;
-            }
-            try {
-                FileOutputStream fos = new FileOutputStream(pictureFile);
-                Log.d("CAMERA", "SAVE PICTURE");
-                fos.write(data);
-                fos.close();
-            } catch (FileNotFoundException e) {
-                Log.d("ERROR", "File not found: " + e.getMessage());
-            } catch (IOException e) {
-                Log.d("ERROR", "Error accessing file: " + e.getMessage());
-            }
-        }
-    };
 
     private File getOutputMediaFile(int type) {
         File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
@@ -188,7 +249,7 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         File mediaFile;
         if (type == MEDIA_TYPE_IMAGE) {
-            mediaFile = new File(mediaStorageDir.getPath() + File.separator + "IMG_" + timeStamp + chosenType);
+            mediaFile = new File(mediaStorageDir.getPath() + File.separator + "IMG_" + timeStamp + mChosenType);
         } else if (type == MEDIA_TYPE_VIDEO) {
             mediaFile = new File(mediaStorageDir.getPath() + File.separator + "VID_" + timeStamp + ".mp4");
         } else {
@@ -211,7 +272,7 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
         mDisplayButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent(context, FileListActivity.class);
+                Intent intent = new Intent(mContext, FileListActivity.class);
                 startActivity(intent);
                 overridePendingTransition(R.anim.slide_out_left, R.anim.slide_in_right);
             }
@@ -219,8 +280,14 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
     }
 
     @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        overridePendingTransition(R.anim.slide_out_left, R.anim.slide_in_right);
+    }
+
+    @Override
     public void onPictureTypeChange(String newType) {
-        chosenType = newType;
+        mChosenType = newType;
     }
 
     @Override
@@ -234,5 +301,11 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
             mCamera.setParameters(mParams);
             Toast.makeText(this, "Flash OFF", Toast.LENGTH_LONG).show();
         }
+    }
+
+    @Override
+    public void onZoomPercentageChange(int percentage) {
+        mParams.setZoom(percentage);
+        mCamera.setParameters(mParams);
     }
 }
