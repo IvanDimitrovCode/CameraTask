@@ -15,6 +15,8 @@ import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.ListView;
@@ -27,16 +29,13 @@ import java.util.ArrayList;
  */
 
 public class FileListActivity extends AppCompatActivity {
-    private ListView              mListView;
     private CustomFileListAdapter mAdapter;
     private ArrayList<File>       mFileList;
-    private Context               context;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.file_list_activity);
-        context = this;
         mFileList = new ArrayList<>();
         File folder = new File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_PICTURES), "MyCameraApp");
@@ -52,22 +51,12 @@ public class FileListActivity extends AppCompatActivity {
         }
 
         mAdapter = new CustomFileListAdapter(this, mFileList);
-        mListView = (ListView) this.findViewById(R.id.file_list);
-        mListView.setAdapter(mAdapter);
-        registerForContextMenu(mListView);
-        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                Uri path = FileProvider.getUriForFile(context,
-                        "com.example.ivandimitrov.cameratask.provider", mFileList.get(i));
+        final ListView listView = (ListView) this.findViewById(R.id.file_list);
+        listView.setAdapter(mAdapter);
+        registerForContextMenu(listView);
+//        final Animation scaleAnimation = AnimationUtils.loadAnimation(this, R.anim.scale_button);
+        listView.setOnItemClickListener(new CustomOnItemClickListener(mFileList, this, listView));
 
-                Intent intent = new Intent(Intent.ACTION_VIEW);//ACTION_GET_CONTENT
-                intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                intent.setDataAndType(path, "image/*");
-                startActivity(intent);
-                overridePendingTransition(R.anim.slide_out_left, R.anim.slide_in_right);
-            }
-        });
     }
 
     @Override
@@ -125,18 +114,35 @@ public class FileListActivity extends AppCompatActivity {
                     dialog.cancel();
                 }
             });
-
             builder.show();
         } else if (item.getTitle().equals("Delete")) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(R.string.delete_message);
-            builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+            final Animation fadeAnimation = AnimationUtils.loadAnimation(this, R.anim.anim_fade);
+            fadeAnimation.setAnimationListener(new Animation.AnimationListener() {
                 @Override
-                public void onClick(DialogInterface dialog, int which) {
+                public void onAnimationStart(Animation animation) {
+
+                }
+
+                @Override
+                public void onAnimationEnd(Animation animation) {
                     File fileForDelete = mFileList.get(mItemSelectedInfo.position);
                     mFileList.remove(mFileList.get(mItemSelectedInfo.position));
                     fileForDelete.delete();
                     mAdapter.notifyDataSetChanged();
+                }
+
+                @Override
+                public void onAnimationRepeat(Animation animation) {
+
+                }
+            });
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle(R.string.delete_message);
+
+            builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    mItemSelectedInfo.targetView.startAnimation(fadeAnimation);
                 }
             });
             builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
@@ -155,7 +161,7 @@ public class FileListActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        overridePendingTransition(R.anim.slide_out_left, R.anim.slide_in_right);
+//        overridePendingTransition(R.anim.slide_out_left, R.anim.slide_in_right);
     }
 }
 

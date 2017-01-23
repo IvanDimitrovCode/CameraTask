@@ -174,19 +174,22 @@ public class CustomAdapter extends ArrayAdapter<DrawerOption> {
     }
 
     interface ExposureListener {
-        public void onExposurePercentageChange(int percentage);
-
+        void onExposurePercentageChange(int percentage);
     }
 
     interface ZoomPercentageListener {
-        public void onZoomPercentageChange(int percentage);
+        void onZoomPercentageChange(int percentage);
     }
 
     interface PictureTypeListener {
-        public void onPictureTypeChange(String newType);
+        void onPictureTypeChange(String newType);
     }
 
     interface FlashListener {
-        public void onFlashToggle();
+        void onFlashToggle();
+    }
+
+    interface CameraPropsListener extends FlashListener, PictureTypeListener, ZoomPercentageListener, ExposureListener {
+
     }
 }

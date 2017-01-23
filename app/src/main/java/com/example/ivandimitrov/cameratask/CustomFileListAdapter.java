@@ -5,6 +5,8 @@ import android.graphics.BitmapFactory;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -29,6 +31,7 @@ public class CustomFileListAdapter extends ArrayAdapter<File> {
 
     @Override
     public View getView(int position, View view, ViewGroup parent) {
+        Animation animation = AnimationUtils.loadAnimation(context, R.anim.anim_appear);
         ViewHolder viewHolder = null;
         if (view == null) {
             LayoutInflater inflater = context.getLayoutInflater();
@@ -37,6 +40,7 @@ public class CustomFileListAdapter extends ArrayAdapter<File> {
             viewHolder.txtTitle = (TextView) view.findViewById(R.id.file_element_name);
             viewHolder.image = (ImageView) view.findViewById(R.id.file_element_image);
             view.setTag(viewHolder);
+            view.startAnimation(animation);
         } else {
             viewHolder = (ViewHolder) view.getTag();
         }

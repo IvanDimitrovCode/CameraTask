@@ -1,7 +1,6 @@
 package com.example.ivandimitrov.cameratask;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -18,7 +17,10 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ListView;
@@ -40,15 +42,9 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
     private static final int MY_PERMISSIONS_REQUEST = 1;
 
     private String mChosenType = CustomAdapter.PICTURE_TYPE_JPG;
-    private Context               mContext;
-    private Button                mCameraButton;
-    private Button                mDisplayButton;
-    private DrawerLayout          mDrawerLayout;
-    private ListView              mDrawerList;
     private ActionBarDrawerToggle mDrawerToggle;
 
     private static Camera            mCamera;
-    private        CameraPreview     mPreview;
     private        Camera.Parameters mParams;
     private Camera.PictureCallback mPicture = new Camera.PictureCallback() {
 
@@ -101,8 +97,8 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
         list.add(new DrawerOption(DrawerOption.DRAWER_WITH_SEEKBAR));
         list.add(new DrawerOption(DrawerOption.DRAWER_WITH_SEEKBAR_EX));
 
-        mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
-        mDrawerList = (ListView) findViewById(R.id.left_drawer);
+        DrawerLayout mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        ListView mDrawerList = (ListView) findViewById(R.id.left_drawer);
 
         mDrawerList.setAdapter(new CustomAdapter(this, list, this, this, this, this));
 
@@ -125,6 +121,7 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
                 super.onDrawerOpened(drawerView);
                 getSupportActionBar().setTitle("Title");
             }
+
         };
 
         // Set the drawer toggle as the DrawerListener
@@ -165,7 +162,6 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
     //=======================================================
 
     private void runActivity() {
-        mContext = this;
         initButtons();
         initDrawerMenu();
         mCamera = getCameraInstance();
@@ -174,9 +170,9 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
         mParams.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
         mCamera.setParameters(mParams);
 
-        mPreview = new CameraPreview(this, mCamera);
+        CameraPreview preview1 = new CameraPreview(this, mCamera);
         FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
-        preview.addView(mPreview);
+        preview.addView(preview1);
     }
 
     private void askPermission() {
@@ -226,7 +222,7 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
     }
 
     void showSavePictureConfirmation() {
-        new AlertDialog.Builder(mContext).setTitle("Picture taken")
+        new AlertDialog.Builder(this).setTitle("Picture taken")
                 .setMessage("Do you want to save the picture")
                 .setPositiveButton("yes", new DialogInterface.OnClickListener() {
                     @Override
@@ -245,16 +241,14 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
                 }).show();
     }
 
-
     private File getOutputMediaFile(int type) {
         File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_PICTURES), "MyCameraApp");
-        if (!mediaStorageDir.exists()) {
-            if (!mediaStorageDir.mkdirs()) {
-                Log.d("MyCameraApp", "failed to create directory");
-                return null;
-            }
+        if (!mediaStorageDir.exists() && !mediaStorageDir.mkdirs()) {
+            Log.d("MyCameraApp", "failed to create directory");
+            return null;
         }
+
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         File mediaFile;
         if (type == MEDIA_TYPE_IMAGE) {
@@ -268,31 +262,52 @@ public class MainActivity extends AppCompatActivity implements CustomAdapter.Pic
     }
 
     private void initButtons() {
-        mCameraButton = (Button) findViewById(R.id.button_capture);
+        final Animation scaleAnimation = AnimationUtils.loadAnimation(this, R.anim.anim_scale);
+
+        Button mCameraButton = (Button) findViewById(R.id.button_capture);
         mCameraButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 mCamera.stopPreview();
+                view.startAnimation(scaleAnimation);
                 showSavePictureConfirmation();
             }
         });
 
-        mDisplayButton = (Button) findViewById(R.id.button_display);
+        final Animation rotateAnimation = AnimationUtils.loadAnimation(this, R.anim.anim_rotate);
+        rotateAnimation.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                Intent intent = new Intent(MainActivity.this, FileListActivity.class);
+                startActivity(intent);
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
+
+        Button mDisplayButton = (Button) findViewById(R.id.button_display);
         mDisplayButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent(mContext, FileListActivity.class);
-                startActivity(intent);
+                view.startAnimation(rotateAnimation);
                 overridePendingTransition(R.anim.slide_out_left, R.anim.slide_in_right);
             }
         });
     }
 
-    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-        overridePendingTransition(R.anim.slide_out_left, R.anim.slide_in_right);
-    }
+//    @Override
+//    public void onBackPressed() {
+//        super.onBackPressed();
+//        overridePendingTransition(R.anim.slide_out_left, R.anim.slide_in_right);
+//    }
 
     @Override
     public void onPictureTypeChange(String newType) {
